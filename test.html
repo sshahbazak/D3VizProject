@@ -1,0 +1,90 @@
+<canvas id="covidAdmissionsChart"></canvas>
+<script>
+    const ctx = document.getElementById('covidAdmissionsChart').getContext('2d');
+    const covidAdmissionsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [/* Insert your week ending dates here */],
+            datasets: [
+                {
+                    label: 'Total Adult COVID-19 Admissions',
+                    data: [/* Insert your weekly total adult COVID-19 admissions data here */],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                },
+                {
+                    label: 'Total Pediatric COVID-19 Admissions',
+                    data: [/* Insert your weekly total pediatric COVID-19 admissions data here */],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: true,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+<canvas id="bedOccupancyChart"></canvas>
+<script>
+    const bedOccupancyCtx = document.getElementById('bedOccupancyChart').getContext('2d');
+    const bedOccupancyChart = new Chart(bedOccupancyCtx, {
+        type: 'bar',
+        data: {
+            labels: [/* Insert your week ending dates here */],
+            datasets: [
+                {
+                    label: 'Percent Inpatient Bed Occupancy',
+                    data: [/* Insert your weekly average percent inpatient bed occupancy data here */],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Percent ICU Bed Occupancy',
+                    data: [/* Insert your weekly average percent ICU bed occupancy data here */],
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+<canvas id="icuPatientsHeatmap"></canvas>
+<script>
+    const heatmapCtx = document.getElementById('icuPatientsHeatmap').getContext('2d');
+    const heatmapData = {
+        labels: [/* Your week ending dates */],
+        datasets: [{
+            label: 'COVID-19 ICU Patients',
+            data: [/* Weekly average hospitalized COVID-19 ICU patients data */],
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        },
+        {
+            label: 'Influenza ICU Patients',
+            data: [/* Weekly average hospitalized Influenza ICU patients data */],
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        }]
+    };
+
+    // Implement heatmap rendering logic here
+    // You can use a library like Chart.js with additional configuration or a dedicated heatmap library
+</script>

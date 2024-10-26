@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>COVID-19 World Map Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+    <script src="https://datamaps.github.io/scripts/0.4.4/datamaps.world.min.js"></script>
+    <script src="centroids.js"></script> <!-- Include your new country centroids file -->
+    <style>
+        /* Make the map fill its parent div */
+        #worldMap { 
+            width: 100%; /* Full width */
+            height: 100%; /* Full height to fill the parent div */
+            position: relative; /* Positioning for the map */
+            overflow: hidden; /* Prevent overflow within the map container */
+        }
+        .hoverinfo { 
+            background-color: white; 
+            border: 1px solid black; 
+        }
+    </style>
+</head>
+<body>
+
+<div id="worldMap"></div>
+
+<script>
+    // Load and aggregate CSV data using D3
+    d3.csv("WHO-COVID-19-global-daily-data.csv", function(data) {
+        // Aggregate cumulative cases by country
+        const countryData = d3.nest()
+            .key(d => d.Country_code)
+            .rollup(d => d3.max(d, g => +g.Cumulative_cases || 0))
+            .map(data);
+
+        // Prepare bubbles data for visualization
+        const bubblesData = Object.keys(countryData).map(countryCode => {
+            const centroid = countryCentroids[countryCode] || { latitude: 0, longitude: 0 };
+            return {
+                centered: countryCode,
+                radius: Math.sqrt(countryData[countryCode]) / 300,  // Adjusted scaling for bubbles
+                fillKey: 'Trouble',
+                cumulativeCases: countryData[countryCode],
+                latitude: centroid.latitude,
+                longitude: centroid.longitude
+            };
+        });
+
+        // Initialize the map and add bubbles
+        initializeMap('worldMap', bubblesData);
+    });
+
+    // Function to initialize the map
+    function initializeMap(containerId, bubblesData) {
+        // Clear the map container before creating a new map
+        document.getElementById(containerId).innerHTML = '';
+
+        var map = new Datamap({
+            scope: 'world',
+            element: document.getElementById(containerId),
+            geographyConfig: {
+                popupOnHover: false,
+                highlightOnHover: false,
+                borderColor: '#007bff',
+                borderWidth: 0.5
+            },
+            bubblesConfig: {
+                popupTemplate: function(geography, data) {
+                    return `<div class="hoverinfo">Country: ${data.centered}<br>Cumulative Cases: ${data.cumulativeCases}</div>`;
+                },
+                fillOpacity: 0.5
+            },
+            fills: {
+                'Visited': '#4caf50',
+                'neato': '#2196f3',
+                'Trouble': '#ff9800',
+                defaultFill: '#f0f0f0'
+            },
+            height: document.getElementById(containerId).clientHeight,
+            width: document.getElementById(containerId).clientWidth,
+            responsive: true,
+            svg: {
+                viewBox: `0 0 ${document.getElementById(containerId).clientWidth} ${document.getElementById(containerId).clientHeight}`
+            }
+        });
+
+
+        // Add bubbles for cumulative cases data
+        map.bubbles(bubblesData, {
+            popupTemplate: function(geo, data) {
+                return `<div class="hoverinfo">${data.centered}: ${data.cumulativeCases} cases</div>`;
+            }
+        });
+
+        map.fit();
+
+        // // Zoom out effect by scaling the projection
+        // map.svg.selectAll('g.datamaps-subunit')
+        //     .attr('transform', 'scale(0.9) translate(-10, 0)');  // Adjust scale and translate as needed
+    }
+
+    // Adjust map size on window resize
+    window.addEventListener('resize', function() {
+        initializeMap('worldMap', []);
+    });
+</script>
+
+</body>
+</html>

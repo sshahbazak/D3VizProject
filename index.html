@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COVID-19 Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+    <script src="https://datamaps.github.io/scripts/0.4.4/datamaps.world.min.js"></script>
+    <script src="centroids.js"></script> <!-- Include your new country centroids file -->
+    <style>
+        /* Reset and base styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        iframe {
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            border: none; /* No border around the iframe */
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+
+        }
+
+        .chart-container {
+            width: 80%;
+            margin: auto;
+            display: flex;
+            flex-wrap: wrap; /* Allow charts to wrap */
+            justify-content: space-between; /* Space between charts */
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Enhanced Heading with Softer Colors */
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #155724; /* Darker green for text */
+            padding: 20px;
+            background: linear-gradient(135deg, #d1e7dd, #cfe2ee); /* Light green to teal gradient */
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* KPI Section */
+        .kpi {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-item {
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 30%;
+            text-align: center;
+        }
+
+        .kpi-item h2 {
+            font-size: 1.2em;
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+
+        .kpi-item h3 {
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+
+        /* Charts Section */
+        .charts {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        canvas {
+            margin: 20px 0;
+        }
+        #worldMap { 
+            width: 100%; /* Full width */
+            height: 100%; /* Full height to fill the parent div */
+            position: relative; /* Positioning for the map */
+            overflow: hidden; /* Prevent overflow within the map container */
+        }
+        .hoverinfo { 
+            background-color: white; 
+            border: 1px solid black; 
+        }
+
+        .chart-container {
+    display: flex;
+    flex: 1; /* Allow containers to grow */
+    justify-content: space-around; /* Space between the charts */
+    margin-bottom: 20px; /* Add space below each chart container */
+}
+
+.chart {
+    flex: 1; /* Allow each chart to take up equal space */
+    padding: 10px; /* Padding around the chart */
+    min-width: 300px; /* Minimum width for each chart to ensure they are not too small */
+}
+
+    </style>
+
+</head>
+<body>
+    
+    <div class="container">
+        <h1>COVID-19 Dashboard</h1>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-button" onclick="showTab('world-tab')">World - Cases and Deaths</button>
+            <button class="tab-button" onclick="showTab('hospitalization-tab')">Hospitalization</button>
+            <button class="tab-button" onclick="showTab('vaccination-tab')">Vaccination</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="world-tab" class="tab-content">
+            <!-- World Cases and Deaths Content (existing code) -->
+            <div class="kpi">
+                <div class="kpi-item">
+                    <h2>Total Cumulative Cases</h2>
+                    <h3 id="total-cases"></h3>
+                    <canvas id="cases-pie-chart"></canvas>
+                </div>
+                <div class="kpi-item">
+                    <h2>Total Cumulative Deaths</h2>
+                    <h3 id="total-deaths"></h3>
+                    <canvas id="deaths-pie-chart"></canvas>
+                </div>
+                <div class="kpi-item">
+                    <h2>Last Reported Date</h2>
+                    <h3 id="last-date"></h3>
+                    <br>
+                    <h2>Cases on Last Day</h2>
+                    <h3 id="last-day-cases"></h3>
+                    <br>
+                    <h2>Deaths on Last Day</h2>
+                    <h3 id="last-day-deaths"></h3>
+                    <br>
+                    <h2>Percentage Change from Previous Days</h2>
+                    <h3 id="percent-change-cases"></h3>
+                    <h3 id="percent-change-deaths"></h3>
+                </div>
+                
+            </div>
+            <div class="charts">
+                <h2>Visualizing the Total Impact of COVID-19 Across the Globe</h2>
+                <div id="worldMap"></div>
+            </div>
+            <div class="charts">
+                <div class="bar-charts">
+                    <h2>Total Cumulative Cases over Time</h2>
+                    <canvas id="cumulative-cases-bar-chart" width="400" height="200"></canvas>
+                    <h2>Total Cumulative Deaths over Time</h2>
+                    <canvas id="cumulative-deaths-bar-chart" width="400" height="200"></canvas>
+                </div>
+                <div class="line-charts">
+                    <h2>Variation in New COVID-19 Cases: A Time-Series Comparison by Country</h2>
+                    <canvas id="new-cases-line-chart" width="400" height="200"></canvas>
+                    <h2>Variation in New COVID-19 Deaths: A Time-Series Comparison by Country</h2>
+                    <canvas id="new-deaths-line-chart" width="400" height="200"></canvas>
+                </div>
+            </div>
+            
+        </div>
+
+        <div id="hospitalization-tab" class="tab-content" style="display: none;">
+            <div class="kpi">
+                <div class="kpi-item">
+                    <h2>Total Adult Admissions</h2>
+                    <p id="totalAdultAdmissions"></p>
+                </div>
+                <div class="kpi-item">
+                    <h2>Total Pediatric Admissions</h2>
+                    <p id="totalPediatricAdmissions"></p>
+                </div>
+                <div class="kpi-item">
+                    <h2>Average Adult Admissions/Week</h2>
+                    <p id="averageAdultAdmissions"></p>
+                </div>
+                <div class="kpi-item">
+                    <h2>Average Pediatric Admissions/Week</h2>
+                    <p id="averagePediatricAdmissions"></p>
+                </div>
+                <div class="kpi-item">
+                    <h2>Bed Occupancy Rate</h2>
+                    <p id="bedOccupancyRate"></p>
+                </div>
+            </div>
+                <div class="chart-container">
+                    <div class="chart">
+                        <h2>Adult COVID Admissions</h2>
+                        <canvas id="adultCovidAdmissionsChart"></canvas>
+                    </div>
+                    <div class="chart">
+                        <h2>Pediatric COVID Admissions</h2>
+                        <canvas id="pediatricCovidAdmissionsChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart">
+                        <h2>Influenza Admissions</h2>
+                        <canvas id="influenzaAdmissionsChart"></canvas>
+                    </div>
+                    <div class="chart">
+                        <h2>Total COVID Admissions</h2>
+                        <canvas id="totalAdmissionsChart"></canvas> <!-- New canvas for Total COVID-19 Admissions -->
+                    </div>
+                </div>
+        </div>
+        
+
+        <div id="vaccination-tab" class="tab-content" style="display: none;">
+            <h2>Vaccination Data</h2>
+            <canvas id="vaccination-chart"></canvas>
+            <!-- Additional vaccination content -->
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        // Load the CSV data
+        d3.csv("Weekly_United_States_Hospitalization_Metrics_by_Jurisdiction.csv", function(data) {
+            // Process data
+            const weekEndingDates = data.map(function(d) { return d['Week Ending Date']; });
+            const adultCovidAdmissions = data.map(function(d) { return +d['Weekly Total Adult COVID-19 Admissions']; });
+            const pediatricCovidAdmissions = data.map(function(d) { return +d['Weekly Total Pediatric COVID-19 Admissions']; });
+            const totalCovidAdmissions = data.map(function(d) { return +d['Weekly Total COVID-19 Admissions']; }); // Adjusted for total COVID-19 admissions
+            const influenzaAdmissions = data.map(function(d) { return +d['Weekly Total Influenza Admissions']; });
+            const totalAdultAdmissions = d3.sum(adultCovidAdmissions);
+            const totalPediatricAdmissions = d3.sum(pediatricCovidAdmissions);
+            const averageAdultAdmissions = (totalAdultAdmissions / adultCovidAdmissions.length).toFixed(2);
+            const averagePediatricAdmissions = (totalPediatricAdmissions / pediatricCovidAdmissions.length).toFixed(2);
+            const totalInpatientBedsOccupied = data.map(function(d) { return +d['Weekly Average Inpatient Beds Occupied']; });
+            const totalInpatientBeds = data.map(function(d) { return +d['Weekly Average Inpatient Beds']; });
+            const occupancyRate = ((d3.sum(totalInpatientBedsOccupied) / d3.sum(totalInpatientBeds)) * 100).toFixed(2);
+
+            // Update KPIs
+            document.getElementById('totalAdultAdmissions').innerText = totalAdultAdmissions;
+            document.getElementById('totalPediatricAdmissions').innerText = totalPediatricAdmissions;
+            document.getElementById('averageAdultAdmissions').innerText = averageAdultAdmissions;
+            document.getElementById('averagePediatricAdmissions').innerText = averagePediatricAdmissions;
+            document.getElementById('bedOccupancyRate').innerText = occupancyRate + '%';
+
+            // Create Adult COVID-19 Admissions Chart
+            const ctxAdult = document.getElementById('adultCovidAdmissionsChart').getContext('2d');
+            new Chart(ctxAdult, {
+                type: 'line',
+                data: {
+                    labels: weekEndingDates,
+                    datasets: [{
+                        label: 'Adult COVID-19 Admissions',
+                        data: adultCovidAdmissions,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        xAxes: [{
+                            scaleLabel: { display: true, labelString: 'Week Ending Date' }
+                        }],
+                        yAxes: [{
+                            scaleLabel: { display: true, labelString: 'Number of Admissions' },
+                            ticks: { beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+
+            // Create Pediatric COVID-19 Admissions Chart
+            const ctxPediatric = document.getElementById('pediatricCovidAdmissionsChart').getContext('2d');
+            new Chart(ctxPediatric, {
+                type: 'line',
+                data: {
+                    labels: weekEndingDates,
+                    datasets: [{
+                        label: 'Pediatric COVID-19 Admissions',
+                        data: pediatricCovidAdmissions,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderWidth: 1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        xAxes: [{
+                            scaleLabel: { display: true, labelString: 'Week Ending Date' }
+                        }],
+                        yAxes: [{
+                            scaleLabel: { display: true, labelString: 'Number of Admissions' },
+                            ticks: { beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+
+            // Create Total COVID-19 Admissions Chart
+            const ctxTotal = document.getElementById('totalAdmissionsChart').getContext('2d');
+            new Chart(ctxTotal, {
+                type: 'line',
+                data: {
+                    labels: weekEndingDates,
+                    datasets: [{
+                        label: 'Total COVID-19 Admissions',
+                        data: totalCovidAdmissions,
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        borderWidth: 1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        xAxes: [{
+                            scaleLabel: { display: true, labelString: 'Week Ending Date' }
+                        }],
+                        yAxes: [{
+                            scaleLabel: { display: true, labelString: 'Number of Admissions' },
+                            ticks: { beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+
+            // Create Influenza Admissions Chart
+            const ctxInfluenza = document.getElementById('influenzaAdmissionsChart').getContext('2d');
+            new Chart(ctxInfluenza, {
+                type: 'line',
+                data: {
+                    labels: weekEndingDates,
+                    datasets: [{
+                        label: 'Influenza Admissions',
+                        data: influenzaAdmissions,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderWidth: 1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        xAxes: [{
+                            scaleLabel: { display: true, labelString: 'Week Ending Date' }
+                        }],
+                        yAxes: [{
+                            scaleLabel: { display: true, labelString: 'Number of Admissions' },
+                            ticks: { beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+        });
+    </script>
+    
+</body>
+</html>

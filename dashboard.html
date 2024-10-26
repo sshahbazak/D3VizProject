@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COVID-19 Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+    <script src="https://datamaps.github.io/scripts/0.4.4/datamaps.world.min.js"></script>
+    <script src="centroids.js"></script> <!-- Include your new country centroids file -->
+    <style>
+        /* Reset and base styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        iframe {
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            border: none; /* No border around the iframe */
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Enhanced Heading with Softer Colors */
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #155724; /* Darker green for text */
+            padding: 20px;
+            background: linear-gradient(135deg, #d1e7dd, #cfe2ee); /* Light green to teal gradient */
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* KPI Section */
+        .kpi {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-item {
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 30%;
+            text-align: center;
+        }
+
+        .kpi-item h2 {
+            font-size: 1.2em;
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+
+        .kpi-item h3 {
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+
+        /* Charts Section */
+        .charts {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        canvas {
+            margin: 20px 0;
+        }
+        #worldMap { 
+            width: 100%; /* Full width */
+            height: 100%; /* Full height to fill the parent div */
+            position: relative; /* Positioning for the map */
+            overflow: hidden; /* Prevent overflow within the map container */
+        }
+        .hoverinfo { 
+            background-color: white; 
+            border: 1px solid black; 
+        }
+    </style>
+
+</head>
+<body>
+    
+    <div class="container">
+        <h1>COVID-19 Dashboard</h1>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-button" onclick="showTab('world-tab')">World - Cases and Deaths</button>
+            <button class="tab-button" onclick="showTab('hospitalization-tab')">Hospitalization</button>
+            <button class="tab-button" onclick="showTab('vaccination-tab')">Vaccination</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="world-tab" class="tab-content">
+            <!-- World Cases and Deaths Content (existing code) -->
+            <div class="kpi">
+                <div class="kpi-item">
+                    <h2>Total Cumulative Cases</h2>
+                    <h3 id="total-cases"></h3>
+                    <canvas id="cases-pie-chart"></canvas>
+                </div>
+                <div class="kpi-item">
+                    <h2>Total Cumulative Deaths</h2>
+                    <h3 id="total-deaths"></h3>
+                    <canvas id="deaths-pie-chart"></canvas>
+                </div>
+                <div class="kpi-item">
+                    <h2>Last Reported Date</h2>
+                    <h3 id="last-date"></h3>
+                    <br>
+                    <h2>Cases on Last Day</h2>
+                    <h3 id="last-day-cases"></h3>
+                    <br>
+                    <h2>Deaths on Last Day</h2>
+                    <h3 id="last-day-deaths"></h3>
+                    <br>
+                    <h2>Percentage Change from Previous Days</h2>
+                    <h3 id="percent-change-cases"></h3>
+                    <h3 id="percent-change-deaths"></h3>
+                </div>
+                
+            </div>
+            <div class="charts">
+                <h2>Visualizing the Total Impact of COVID-19 Across the Globe</h2>
+                <div id="worldMap"></div>
+            </div>
+            <div class="charts">
+                <div class="bar-charts">
+                    <h2>Total Cumulative Cases over Time</h2>
+                    <canvas id="cumulative-cases-bar-chart" width="400" height="200"></canvas>
+                    <h2>Total Cumulative Deaths over Time</h2>
+                    <canvas id="cumulative-deaths-bar-chart" width="400" height="200"></canvas>
+                </div>
+                <div class="line-charts">
+                    <h2>Variation in New COVID-19 Cases: A Time-Series Comparison by Country</h2>
+                    <canvas id="new-cases-line-chart" width="400" height="200"></canvas>
+                    <h2>Variation in New COVID-19 Deaths: A Time-Series Comparison by Country</h2>
+                    <canvas id="new-deaths-line-chart" width="400" height="200"></canvas>
+                </div>
+            </div>
+            
+        </div>
+
+        <div id="hospitalization-tab" class="tab-content" style="display: none;">
+            <h2>Line Chart for COVID-19 Admissions</h2>
+            <canvas id="covidAdmissionsChart"></canvas>
+            <script>
+                const ctx = document.getElementById('covidAdmissionsChart').getContext('2d');
+                const covidAdmissionsChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [/* Insert your week ending dates here */],
+                        datasets: [
+                            {
+                                label: 'Total Adult COVID-19 Admissions',
+                                data: [/* Insert your weekly total adult COVID-19 admissions data here */],
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                fill: true,
+                            },
+                            {
+                                label: 'Total Pediatric COVID-19 Admissions',
+                                data: [/* Insert your weekly total pediatric COVID-19 admissions data here */],
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                fill: true,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            </script>
+
+            <h2>Bar Chart for Bed Occupancy Rates</h2>
+            <canvas id="bedOccupancyChart"></canvas>
+            <script>
+                const bedOccupancyCtx = document.getElementById('bedOccupancyChart').getContext('2d');
+                const bedOccupancyChart = new Chart(bedOccupancyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [/* Insert your week ending dates here */],
+                        datasets: [
+                            {
+                                label: 'Percent Inpatient Bed Occupancy',
+                                data: [/* Insert your weekly average percent inpatient bed occupancy data here */],
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Percent ICU Bed Occupancy',
+                                data: [/* Insert your weekly average percent ICU bed occupancy data here */],
+                                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            </script>
+
+            <h2>Heatmap for Influenza and COVID-19 ICU Patients</h2>
+            <canvas id="icuPatientsHeatmap"></canvas>
+            <script>
+                const heatmapCtx = document.getElementById('icuPatientsHeatmap').getContext('2d');
+                const heatmapData = {
+                    labels: [/* Your week ending dates */],
+                    datasets: [{
+                        label: 'COVID-19 ICU Patients',
+                        data: [/* Weekly average hospitalized COVID-19 ICU patients data */],
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    },
+                    {
+                        label: 'Influenza ICU Patients',
+                        data: [/* Weekly average hospitalized Influenza ICU patients data */],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    }]
+                };
+
+                // Implement heatmap rendering logic here
+                // You can use a library like Chart.js with additional configuration or a dedicated heatmap library
+            </script>
+
+
+        </div>
+
+        <div id="vaccination-tab" class="tab-content" style="display: none;">
+            <h2>Vaccination Data</h2>
+            <canvas id="vaccination-chart"></canvas>
+            <!-- Additional vaccination content -->
+        </div>
+    </div>
+    <script src="script.js"></script>
+    
+</body>
+</html>
